@@ -1,0 +1,182 @@
+{% extends 'base.html' %}
+{% block title %}Mark Attendance{% endblock %}
+{% block page_title %}Mark Attendance{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;margin-bottom:24px;">
+  <div>
+    <h2 style="font-family:'Space Mono',monospace;font-size:18px;">
+      {{ sess.course_name }}
+      <span style="color:var(--text-muted);font-size:14px;">{{ sess.code }}</span>
+    </h2>
+    <div style="font-size:13px;color:var(--text-muted);margin-top:4px;">
+      {{ sess.session_date }}
+      &nbsp;·&nbsp; {{ sess.start_time }} – {{ sess.end_time }}
+      {% if sess.room %}&nbsp;·&nbsp; Room: <strong style="color:var(--text)">{{ sess.room }}</strong>{% endif %}
+      {% if sess.topic %}&nbsp;·&nbsp; <em>{{ sess.topic }}</em>{% endif %}
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <div id="summary" style="font-family:'Space Mono',monospace;font-size:13px;color:var(--text-muted);background:var(--surface2);padding:6px 14px;border-radius:8px;border:1px solid var(--border);"></div>
+    <button class="btn btn-primary" onclick="saveAttendance()"><i class="fas fa-save"></i> Save</button>
+  </div>
+</div>
+
+<div class="card">
+  <!-- Toolbar -->
+  <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+    <input type="text" id="search" class="form-control" placeholder="Search student…"
+      style="max-width:240px;" oninput="filterStudents(this.value)"/>
+    <button class="btn btn-outline btn-sm" onclick="markAll('present')">
+      <i class="fas fa-check" style="color:var(--success)"></i> All Present
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="markAll('absent')">
+      <i class="fas fa-times" style="color:var(--danger)"></i> All Absent
+    </button>
+    <button class="btn btn-outline btn-sm" onclick="markAll('late')">
+      <i class="fas fa-clock" style="color:var(--warning)"></i> All Late
+    </button>
+    <span style="margin-left:auto;font-size:13px;color:var(--text-muted);">{{ students|length }} students</span>
+  </div>
+
+  <div class="table-wrap">
+    <table id="attTable">
+      <thead>
+        <tr>
+          <th style="width:40px;">#</th>
+          <th>Student</th>
+          <th>Roll No.</th>
+          <th>Status</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in students %}
+      <tr data-name="{{ s.full_name | lower }}" data-roll="{{ (s.roll_number or '') | lower }}">
+        <td style="color:var(--text-muted);font-size:12px;">{{ loop.index }}</td>
+        <td>
+          <div style="display:flex;align-items:center;gap:10px;">
+            <div style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#3b82f6,#06b6d4);
+                        display:grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0;">
+              {{ s.full_name[0].upper() }}
+            </div>
+            <span style="font-weight:500;">{{ s.full_name }}</span>
+          </div>
+        </td>
+        <td style="font-family:'Space Mono',monospace;font-size:12px;">{{ s.roll_number or '—' }}</td>
+        <td>
+          <div class="att-radios">
+            {% for status in ['present', 'absent', 'late', 'excused'] %}
+            <input class="att-radio" type="radio"
+              name="att_{{ s.id }}"
+              id="att_{{ s.id }}_{{ status }}"
+              value="{{ status }}"
+              {% if s.status == status %}checked{% endif %}
+              onchange="updateSummary()">
+            <label class="att-label" for="att_{{ s.id }}_{{ status }}">{{ status | capitalize }}</label>
+            {% endfor %}
+          </div>
+        </td>
+        <td>
+          <input type="text" class="form-control"
+            style="font-size:12px;padding:6px 10px;min-width:140px;"
+            id="rem_{{ s.id }}"
+            placeholder="Optional note…"
+            value="{{ s.remarks or '' }}"/>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" style="text-align:center;padding:40px;color:var(--text-muted);">No students enrolled in this course.</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display:flex;justify-content:flex-end;padding-top:20px;gap:12px;">
+    <a href="/sessions" class="btn btn-outline">← Back</a>
+    <button class="btn btn-primary" onclick="saveAttendance()"><i class="fas fa-save"></i> Save Attendance</button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast" style="position:fixed;bottom:24px;right:24px;padding:14px 20px;border-radius:10px;
+     background:var(--success);color:#fff;font-weight:600;font-size:14px;display:flex;align-items:center;
+     gap:10px;transform:translateY(100px);opacity:0;transition:.3s;z-index:999;">
+  <i class="fas fa-check-circle"></i>
+  <span id="toast-msg">Saved!</span>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  const SESSION_ID  = {{ sess.id }};
+  // Build student ID list from template
+  const STUDENT_IDS = [{% for s in students %}{{ s.id }}{% if not loop.last %},{% endif %}{% endfor %}];
+
+  function updateSummary() {
+    let p=0, a=0, l=0, e=0;
+    STUDENT_IDS.forEach(sid => {
+      const checked = document.querySelector(`input[name="att_${sid}"]:checked`);
+      const val = checked ? checked.value : 'absent';
+      if(val==='present') p++;
+      else if(val==='absent')  a++;
+      else if(val==='late')    l++;
+      else if(val==='excused') e++;
+    });
+    document.getElementById('summary').textContent =
+      `✓${p}  ✗${a}  ⧗${l}  ε${e}  /  ${STUDENT_IDS.length}`;
+  }
+
+  function markAll(status) {
+    STUDENT_IDS.forEach(sid => {
+      const radio = document.getElementById(`att_${sid}_${status}`);
+      if(radio) radio.checked = true;
+    });
+    updateSummary();
+  }
+
+  function filterStudents(q) {
+    q = q.toLowerCase();
+    document.querySelectorAll('#attTable tbody tr').forEach(tr => {
+      const name = (tr.dataset.name || '');
+      const roll = (tr.dataset.roll || '');
+      tr.style.display = (!q || name.includes(q) || roll.includes(q)) ? '' : 'none';
+    });
+  }
+
+  function saveAttendance() {
+    const records = STUDENT_IDS.map(sid => {
+      const checked = document.querySelector(`input[name="att_${sid}"]:checked`);
+      const remEl   = document.getElementById(`rem_${sid}`);
+      return {
+        student_id: sid,
+        status:     checked ? checked.value : 'absent',
+        remarks:    remEl ? remEl.value : ''
+      };
+    });
+
+    fetch('/attendance/save', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ session_id: SESSION_ID, records: records })
+    })
+    .then(r => r.json())
+    .then(d => {
+      const t   = document.getElementById('toast');
+      const msg = document.getElementById('toast-msg');
+      msg.textContent = d.success ? 'Attendance saved successfully!' : ('Error: ' + d.error);
+      t.style.background = d.success ? 'var(--success)' : 'var(--danger)';
+      t.style.transform = 'translateY(0)';
+      t.style.opacity   = '1';
+      setTimeout(() => {
+        t.style.transform = 'translateY(100px)';
+        t.style.opacity   = '0';
+      }, 2800);
+    })
+    .catch(err => alert('Network error: ' + err));
+  }
+
+  // Init summary on load
+  updateSummary();
+</script>
+{% endblock %}

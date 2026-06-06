@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sign Up | UniAttend</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root { --bg:#0a0e1a; --surface:#111827; --surface2:#1a2236; --border:#1f2d42; --accent:#3b82f6; --accent2:#06b6d4; --success:#10b981; --danger:#ef4444; --text:#e2e8f0; --muted:#64748b; }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:grid; place-items:center; padding:40px 16px; }
+    .card { background:var(--surface); border:1px solid var(--border); border-radius:16px; padding:40px; width:100%; max-width:600px; }
+    .brand { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+    .brand-icon { width:40px; height:40px; border-radius:10px; background:linear-gradient(135deg,var(--accent),var(--accent2)); display:grid; place-items:center; font-size:18px; color:#fff; }
+    .brand-name { font-family:'Space Mono',monospace; font-size:18px; font-weight:700; }
+    h2 { font-family:'Space Mono',monospace; font-size:22px; margin-bottom:6px; }
+    .sub { font-size:14px; color:var(--muted); margin-bottom:28px; }
+    .flash { padding:12px 16px; border-radius:8px; margin-bottom:18px; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .flash-danger  { background:#ef444415; border:1px solid #ef444440; color:var(--danger); }
+    .flash-success { background:#10b98115; border:1px solid #10b98140; color:var(--success); }
+    .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-group { margin-bottom:16px; }
+    .form-label { display:block; font-size:11px; font-weight:700; color:var(--muted); text-transform:uppercase; letter-spacing:.07em; margin-bottom:6px; }
+    .form-control { width:100%; padding:10px 14px; background:var(--surface2); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:14px; font-family:inherit; outline:none; transition:.2s; }
+    .form-control:focus { border-color:var(--accent); }
+    select.form-control option { background:var(--surface); }
+    .role-tabs { display:flex; gap:8px; margin-bottom:20px; }
+    .role-tab { flex:1; padding:10px; border-radius:8px; border:1px solid var(--border); background:var(--surface2); color:var(--muted); font-size:13px; font-weight:600; cursor:pointer; text-align:center; transition:.2s; }
+    .role-tab.active { border-color:var(--accent); color:var(--accent); background:#3b82f610; }
+    #role-input { display:none; }
+    .conditional { display:none; }
+    .conditional.show { display:block; }
+    .btn { width:100%; padding:13px; border-radius:8px; border:none; background:linear-gradient(135deg,var(--accent),var(--accent2)); color:#fff; font-size:15px; font-weight:700; cursor:pointer; font-family:inherit; transition:.2s; margin-top:8px; }
+    .btn:hover { opacity:.9; transform:translateY(-1px); }
+    .login-link { text-align:center; font-size:14px; color:var(--muted); margin-top:20px; }
+    .login-link a { color:var(--accent); text-decoration:none; font-weight:600; }
+    @media(max-width:500px) { .form-row { grid-template-columns:1fr; } }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="brand">
+    <div class="brand-icon"><i class="fas fa-graduation-cap"></i></div>
+    <div class="brand-name">UniAttend</div>
+  </div>
+  <h2>Create Account</h2>
+  <div class="sub">Join the university attendance system</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><i class="fas fa-exclamation-circle"></i> {{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <form method="POST" action="/signup" id="signupForm">
+    <input type="hidden" name="role" id="role-input" value="student"/>
+
+    <div class="role-tabs">
+      <div class="role-tab active" onclick="setRole('student',this)"><i class="fas fa-user-graduate"></i> Student</div>
+      <div class="role-tab"       onclick="setRole('teacher',this)"><i class="fas fa-chalkboard-teacher"></i> Teacher</div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Full Name *</label>
+        <input type="text" name="full_name" class="form-control" placeholder="Your full name" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email Address *</label>
+        <input type="email" name="email" class="form-control" placeholder="you@university.edu" required/>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Password *</label>
+        <input type="password" name="password" class="form-control" placeholder="Min 8 characters" required/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Phone</label>
+        <input type="tel" name="phone" class="form-control" placeholder="10-digit mobile"/>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Department</label>
+        <select name="department" class="form-control">
+          <option value="">Select Department</option>
+          <option>Computer Science</option>
+          <option>Electronics</option>
+          <option>Mechanical Engineering</option>
+          <option>Business Administration</option>
+          <option>Mathematics</option>
+          <option>Physics</option>
+          <option>Chemistry</option>
+          <option>Civil Engineering</option>
+        </select>
+      </div>
+      <div class="form-group conditional show" id="roll-group">
+        <label class="form-label">Roll Number</label>
+        <input type="text" name="roll_number" class="form-control" placeholder="e.g. CS2024001"/>
+      </div>
+      <div class="form-group conditional" id="emp-group">
+        <label class="form-label">Employee ID</label>
+        <input type="text" name="employee_id" class="form-control" placeholder="e.g. TCH001"/>
+      </div>
+    </div>
+
+    <div class="form-group conditional show" id="sem-group">
+      <label class="form-label">Semester</label>
+      <select name="semester" class="form-control">
+        <option value="">Select Semester</option>
+        {% for i in range(1,9) %}<option value="{{ i }}">Semester {{ i }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <button type="submit" class="btn"><i class="fas fa-user-plus"></i> Create Account</button>
+  </form>
+  <div class="login-link">Already have an account? <a href="/login">Sign In</a></div>
+</div>
+
+<script>
+  function setRole(role, el) {
+    document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('role-input').value = role;
+
+    const showStudent = role === 'student';
+    document.getElementById('roll-group').classList.toggle('show', showStudent);
+    document.getElementById('sem-group').classList.toggle('show', showStudent);
+    document.getElementById('emp-group').classList.toggle('show', !showStudent);
+  }
+</script>
+</body>
+</html>

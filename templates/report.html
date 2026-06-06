@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+{% block title %}Attendance Report{% endblock %}
+{% block page_title %}Attendance Report{% endblock %}
+
+{% block content %}
+<!-- Filters -->
+<div class="card" style="margin-bottom:20px;">
+  <div class="card-header"><div class="card-title"><i class="fas fa-filter"></i> Filters</div></div>
+  <form method="GET" action="/attendance/report">
+    <div style="display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;">
+      {% if courses %}
+      <div style="flex:1;min-width:180px;">
+        <label class="form-label">Course</label>
+        <select name="course_id" class="form-control">
+          <option value="">All Courses</option>
+          {% for c in courses %}
+          <option value="{{ c.id }}" {% if filters.course_id == c.id|string %}selected{% endif %}>
+            {{ c.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      {% if students %}
+      <div style="flex:1;min-width:180px;">
+        <label class="form-label">Student</label>
+        <select name="student_id" class="form-control">
+          <option value="">All Students</option>
+          {% for s in students %}
+          <option value="{{ s.id }}" {% if filters.student_id == s.id|string %}selected{% endif %}>
+            {{ s.full_name }}{% if s.roll_number %} ({{ s.roll_number }}){% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <div style="flex:1;min-width:140px;">
+        <label class="form-label">From Date</label>
+        <input type="date" name="from_date" class="form-control" value="{{ filters.from_date or '' }}"/>
+      </div>
+      <div style="flex:1;min-width:140px;">
+        <label class="form-label">To Date</label>
+        <input type="date" name="to_date" class="form-control" value="{{ filters.to_date or '' }}"/>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Apply</button>
+        <a href="/attendance/report" class="btn btn-outline">Reset</a>
+      </div>
+    </div>
+  </form>
+</div>
+
+<!-- Summary table -->
+{% if summary %}
+<div style="margin-bottom:20px;">
+  <div style="font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);margin-bottom:10px;letter-spacing:.08em;">
+    SUMMARY — {{ summary | length }} record(s)
+  </div>
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Roll No.</th>
+            <th>Course</th>
+            <th>Total</th>
+            <th>Present</th>
+            <th>Attendance</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in summary %}
+          {% set pct = r.pct | default(0) | float %}
+          <tr>
+            <td><strong>{{ r.full_name }}</strong></td>
+            <td style="font-family:'Space Mono',monospace;font-size:12px;">{{ r.roll_number or '—' }}</td>
+            <td>
+              {{ r.course_name }}
+              <span style="color:var(--text-muted);font-size:11px;">{{ r.code }}</span>
+            </td>
+            <td>{{ r.total }}</td>
+            <td>{{ r.present_count }}</td>
+            <td>
+              <div style="display:flex;align-items:center;gap:10px;">
+                <div class="progress" style="width:70px;">
+                  <div class="progress-bar {% if pct >= 75 %}pct-good{% elif pct >= 60 %}pct-warn{% else %}pct-danger{% endif %}"
+                       style="width:{{ pct }}%"></div>
+                </div>
+                <span style="font-family:'Space Mono',monospace;font-size:12px;
+                  color:{% if pct >= 75 %}var(--success){% elif pct >= 60 %}var(--warning){% else %}var(--danger){% endif %}">
+                  {{ pct }}%
+                </span>
+              </div>
+            </td>
+            <td>
+              {% if pct >= 75 %}<span class="badge badge-present">Safe</span>
+              {% elif pct >= 60 %}<span class="badge badge-late">At Risk</span>
+              {% else %}<span class="badge badge-absent">Shortage</span>{% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Detailed records -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      Detailed Records
+      <span style="font-weight:400;color:var(--text-muted);font-size:12px;margin-left:8px;">
+        {{ records | length }} entries
+      </span>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="exportCSV()">
+      <i class="fas fa-download"></i> Export CSV
+    </button>
+  </div>
+
+  {% if records %}
+  <div class="table-wrap">
+    <table id="recordsTable">
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Student</th>
+          <th>Roll No.</th>
+          <th>Course</th>
+          <th>Time</th>
+          <th>Status</th>
+          <th>Remarks</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in records %}
+        <tr>
+          <td>{{ r.session_date }}</td>
+          <td><strong>{{ r.full_name }}</strong></td>
+          <td style="font-family:'Space Mono',monospace;font-size:11px;">{{ r.roll_number or '—' }}</td>
+          <td>{{ r.course_name }}</td>
+          <td style="font-size:12px;color:var(--text-muted)">{{ r.start_time }}</td>
+          <td><span class="badge badge-{{ r.status }}">{{ r.status }}</span></td>
+          <td style="font-size:12px;color:var(--text-muted)">{{ r.remarks or '' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div style="text-align:center;padding:48px;color:var(--text-muted);">
+    <i class="fas fa-database" style="font-size:40px;margin-bottom:12px;opacity:.3;display:block;"></i>
+    No attendance records found for the selected filters.
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function exportCSV() {
+  const rows = [['Date','Student','Roll No.','Course','Status','Remarks']];
+  document.querySelectorAll('#recordsTable tbody tr').forEach(tr => {
+    const cells = tr.querySelectorAll('td');
+    if (cells.length >= 7) {
+      rows.push([
+        cells[0].textContent.trim(),
+        cells[1].textContent.trim(),
+        cells[2].textContent.trim(),
+        cells[3].textContent.trim(),
+        cells[5].textContent.trim(),
+        cells[6].textContent.trim()
+      ]);
+    }
+  });
+  const csv = rows.map(r => r.map(c => '"' + c.replace(/"/g, '""') + '"').join(',')).join('\n');
+  const a   = document.createElement('a');
+  a.href    = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+  a.download = 'attendance_report_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+</script>
+{% endblock %}

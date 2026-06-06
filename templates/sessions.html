@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+{% block title %}Sessions{% endblock %}
+{% block page_title %}Class Sessions{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+  <div style="color:var(--text-muted);font-size:14px;">
+    <i class="fas fa-calendar-alt" style="margin-right:6px;"></i>{{ sessions | length }} session(s) found
+  </div>
+  {% if session.get('role') in ('teacher','admin') %}
+  <button class="btn btn-primary"
+    onclick="document.getElementById('newSessModal').classList.add('open')">
+    <i class="fas fa-plus"></i> New Session
+  </button>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Course</th>
+          {% if session.get('role') == 'admin' %}<th>Teacher</th>{% endif %}
+          <th>Time</th>
+          <th>Room</th>
+          <th>Topic</th>
+          {% if session.get('role') in ('teacher','admin') %}<th>Attendance</th>{% endif %}
+          {% if session.get('role') == 'student' %}<th>My Status</th>{% endif %}
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for s in sessions %}
+        <tr>
+          <td>
+            <div style="font-weight:600;">{{ s.session_date }}</div>
+          </td>
+          <td>
+            <strong>{{ s.course_name }}</strong><br>
+            <span style="font-size:11px;color:var(--text-muted)">{{ s.code }}</span>
+          </td>
+          {% if session.get('role') == 'admin' %}
+          <td>{{ s.teacher_name }}</td>
+          {% endif %}
+          <td style="font-size:13px;white-space:nowrap;">{{ s.start_time }} – {{ s.end_time }}</td>
+          <td>{{ s.room or '—' }}</td>
+          <td style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+            {{ s.topic or '—' }}
+          </td>
+          {% if session.get('role') in ('teacher','admin') %}
+          <td>
+            {% set total  = s.enrolled_count | default(0) | int %}
+            {% set present = s.present_count  | default(0) | int %}
+            {% if total > 0 %}
+              {% set pct = ((present / total) * 100) | round(0) | int %}
+              <div style="display:flex;align-items:center;gap:8px;">
+                <div class="progress" style="width:60px;">
+                  <div class="progress-bar {% if pct >= 75 %}pct-good{% elif pct >= 50 %}pct-warn{% else %}pct-danger{% endif %}"
+                       style="width:{{ pct }}%"></div>
+                </div>
+                <span style="font-size:12px;font-family:'Space Mono',monospace;">{{ present }}/{{ total }}</span>
+              </div>
+            {% else %}
+              <span style="color:var(--text-muted);font-size:12px;">Not marked</span>
+            {% endif %}
+          </td>
+          {% endif %}
+          {% if session.get('role') == 'student' %}
+          <td><span class="badge badge-{{ s.my_status | default('absent') }}">{{ s.my_status | default('absent') }}</span></td>
+          {% endif %}
+          <td>
+            {% if session.get('role') in ('teacher','admin') %}
+            <a href="/attendance/mark/{{ s.id }}" class="btn btn-outline btn-sm">
+              <i class="fas fa-pen"></i> Mark
+            </a>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <i class="fas fa-calendar-times" style="font-size:40px;margin-bottom:12px;display:block;opacity:.3;"></i>
+            No sessions found.
+            {% if session.get('role') in ('teacher','admin') %}
+            <br><button class="btn btn-primary" style="margin-top:16px;"
+              onclick="document.getElementById('newSessModal').classList.add('open')">
+              <i class="fas fa-plus"></i> Create First Session
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ── New Session Modal ── -->
+{% if session.get('role') in ('teacher','admin') %}
+<div class="modal-overlay" id="newSessModal">
+  <div class="modal">
+    <div class="modal-title"><i class="fas fa-calendar-plus"></i> Create New Session</div>
+    {% if courses %}
+    <div class="form-group">
+      <label class="form-label">Course *</label>
+      <select class="form-control" id="ns-course">
+        {% for c in courses %}
+        <option value="{{ c.id }}">{{ c.name }} ({{ c.code }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Date *</label>
+        <input type="date" class="form-control" id="ns-date"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Room</label>
+        <input type="text" class="form-control" id="ns-room" placeholder="e.g. LH-101"/>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Start Time *</label>
+        <input type="time" class="form-control" id="ns-start" value="09:00"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Time *</label>
+        <input type="time" class="form-control" id="ns-end" value="10:00"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Topic</label>
+      <input type="text" class="form-control" id="ns-topic" placeholder="Session topic…"/>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:4px;">
+      <button class="btn btn-primary" style="flex:1" onclick="createSession()">
+        <i class="fas fa-check"></i> Create & Mark Attendance
+      </button>
+      <button class="btn btn-outline"
+        onclick="document.getElementById('newSessModal').classList.remove('open')">
+        Cancel
+      </button>
+    </div>
+    {% else %}
+    <p style="color:var(--text-muted);margin-bottom:16px;">No courses assigned to you. Please contact admin.</p>
+    <button class="btn btn-outline" onclick="document.getElementById('newSessModal').classList.remove('open')">Close</button>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Set today's date as default
+  const dateEl = document.getElementById('ns-date');
+  if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+
+  function createSession() {
+    const courseEl = document.getElementById('ns-course');
+    const dateVal  = document.getElementById('ns-date').value;
+    if (!courseEl || !courseEl.value) { alert('Please select a course.'); return; }
+    if (!dateVal) { alert('Please select a date.'); return; }
+
+    fetch('/sessions/create', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        course_id:    courseEl.value,
+        session_date: dateVal,
+        start_time:   document.getElementById('ns-start').value || '09:00',
+        end_time:     document.getElementById('ns-end').value   || '10:00',
+        topic:        (document.getElementById('ns-topic') || {}).value || '',
+        room:         (document.getElementById('ns-room')  || {}).value || ''
+      })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        location.href = '/attendance/mark/' + d.session_id;
+      } else {
+        alert('Error: ' + (d.error || 'Unknown error'));
+      }
+    })
+    .catch(err => alert('Network error: ' + err));
+  }
+</script>
+{% endblock %}

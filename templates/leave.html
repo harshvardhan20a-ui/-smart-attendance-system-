@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}Leave Requests{% endblock %}
+{% block page_title %}Leave Requests{% endblock %}
+
+{% block content %}
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+  <div style="color:var(--text-muted);font-size:14px;">
+    <i class="fas fa-file-alt" style="margin-right:6px;"></i>{{ leaves | length }} request(s)
+  </div>
+  {% if session.get('role') == 'student' %}
+  <button class="btn btn-primary"
+    onclick="document.getElementById('leaveModal').classList.add('open')">
+    <i class="fas fa-file-medical"></i> Apply for Leave
+  </button>
+  {% endif %}
+</div>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          {% if session.get('role') != 'student' %}<th>Student</th>{% endif %}
+          <th>Course</th>
+          <th>From</th>
+          <th>To</th>
+          <th>Reason</th>
+          <th>Status</th>
+          <th>Submitted</th>
+          {% if session.get('role') != 'student' %}<th>Actions</th>{% endif %}
+        </tr>
+      </thead>
+      <tbody>
+      {% for l in leaves %}
+        <tr>
+          {% if session.get('role') != 'student' %}
+          <td>
+            <strong>{{ l.student_name }}</strong><br>
+            <span style="font-size:11px;color:var(--text-muted)">{{ l.roll_number or '—' }}</span>
+          </td>
+          {% endif %}
+          <td>{{ l.course_name or 'All Courses' }}</td>
+          <td>{{ l.from_date }}</td>
+          <td>{{ l.to_date }}</td>
+          <td style="max-width:200px;">
+            <div style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px;" title="{{ l.reason }}">
+              {{ l.reason }}
+            </div>
+          </td>
+          <td><span class="badge badge-{{ l.status }}">{{ l.status }}</span></td>
+          <td style="font-size:12px;color:var(--text-muted)">
+            {{ l.created_at.strftime('%d %b %Y') if l.created_at else '—' }}
+          </td>
+          {% if session.get('role') != 'student' %}
+          <td>
+            {% if l.status == 'pending' %}
+            <div style="display:flex;gap:6px;">
+              <button class="btn btn-success btn-sm" onclick="reviewLeave({{ l.id }}, 'approved')" title="Approve">
+                <i class="fas fa-check"></i>
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="reviewLeave({{ l.id }}, 'rejected')" title="Reject">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            {% else %}
+            <span style="font-size:12px;color:var(--text-muted);">Reviewed</span>
+            {% endif %}
+          </td>
+          {% endif %}
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+            <i class="fas fa-file-alt" style="font-size:40px;margin-bottom:12px;display:block;opacity:.3;"></i>
+            No leave requests yet.
+            {% if session.get('role') == 'student' %}
+            <br>
+            <button class="btn btn-primary" style="margin-top:16px;"
+              onclick="document.getElementById('leaveModal').classList.add('open')">
+              <i class="fas fa-file-medical"></i> Apply for Leave
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Apply Leave Modal (students only) -->
+{% if session.get('role') == 'student' %}
+<div class="modal-overlay" id="leaveModal">
+  <div class="modal">
+    <div class="modal-title"><i class="fas fa-file-medical"></i> Apply for Leave</div>
+    <div class="form-group">
+      <label class="form-label">Course (leave blank for all)</label>
+      <select class="form-control" id="lv-course">
+        <option value="">All Courses</option>
+        {% for c in courses %}
+        <option value="{{ c.id }}">{{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">From Date *</label>
+        <input type="date" class="form-control" id="lv-from"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">To Date *</label>
+        <input type="date" class="form-control" id="lv-to"/>
+      </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Reason *</label>
+      <textarea class="form-control" id="lv-reason" rows="4"
+        placeholder="Please explain the reason for your leave application…"></textarea>
+    </div>
+    <div style="display:flex;gap:12px;margin-top:8px;">
+      <button class="btn btn-primary" style="flex:1" onclick="submitLeave()">
+        <i class="fas fa-paper-plane"></i> Submit Request
+      </button>
+      <button class="btn btn-outline"
+        onclick="document.getElementById('leaveModal').classList.remove('open')">
+        Cancel
+      </button>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Set today's date as default
+  const today = new Date().toISOString().slice(0, 10);
+  const fromEl = document.getElementById('lv-from');
+  const toEl   = document.getElementById('lv-to');
+  if (fromEl) fromEl.value = today;
+  if (toEl)   toEl.value   = today;
+
+  function submitLeave() {
+    const reason = (document.getElementById('lv-reason').value || '').trim();
+    const from   = document.getElementById('lv-from').value;
+    const to     = document.getElementById('lv-to').value;
+
+    if (!reason) { alert('Please enter a reason for leave.'); return; }
+    if (!from || !to) { alert('Please select the date range.'); return; }
+    if (from > to) { alert('From date cannot be after To date.'); return; }
+
+    const courseVal = document.getElementById('lv-course').value;
+
+    fetch('/leave/apply', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        course_id: courseVal || null,
+        from_date: from,
+        to_date:   to,
+        reason:    reason
+      })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        location.reload();
+      } else {
+        alert('Error submitting request: ' + (d.error || 'Unknown error'));
+      }
+    })
+    .catch(err => alert('Network error: ' + err));
+  }
+
+  function reviewLeave(id, status) {
+    const label = status === 'approved' ? 'approve' : 'reject';
+    if (!confirm(`Are you sure you want to ${label} this leave request?`)) return;
+
+    fetch(`/leave/review/${id}`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ status: status })
+    })
+    .then(r => r.json())
+    .then(d => {
+      if (d.success) {
+        location.reload();
+      } else {
+        alert('Error: ' + (d.error || 'Unknown error'));
+      }
+    })
+    .catch(err => alert('Network error: ' + err));
+  }
+</script>
+{% endblock %}

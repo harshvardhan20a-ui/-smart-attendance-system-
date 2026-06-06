@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login | UniAttend</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <style>
+    :root {
+      --bg:#0a0e1a; --surface:#111827; --surface2:#1a2236; --border:#1f2d42;
+      --accent:#3b82f6; --accent2:#06b6d4; --success:#10b981; --danger:#ef4444;
+      --text:#e2e8f0; --muted:#64748b;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; }
+
+    .left {
+      flex:1; background:var(--surface); border-right:1px solid var(--border);
+      display:flex; flex-direction:column; padding:60px; position:relative; overflow:hidden;
+    }
+    .left::before {
+      content:''; position:absolute; top:-200px; left:-200px;
+      width:600px; height:600px; border-radius:50%;
+      background:radial-gradient(circle,#3b82f620 0%,transparent 70%);
+      pointer-events:none;
+    }
+    .left::after {
+      content:''; position:absolute; bottom:-100px; right:-100px;
+      width:400px; height:400px; border-radius:50%;
+      background:radial-gradient(circle,#06b6d418 0%,transparent 70%);
+    }
+    .brand { display:flex; align-items:center; gap:14px; margin-bottom:80px; }
+    .brand-icon {
+      width:48px; height:48px; border-radius:12px;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      display:grid; place-items:center; font-size:22px; color:#fff;
+    }
+    .brand-name { font-family:'Space Mono',monospace; font-size:22px; font-weight:700; }
+    .brand-tag  { font-size:11px; color:var(--muted); letter-spacing:.1em; text-transform:uppercase; }
+
+    .hero-title {
+      font-family:'Space Mono',monospace; font-size:38px; font-weight:700;
+      line-height:1.2; margin-bottom:20px;
+    }
+    .hero-title span { color:var(--accent); }
+    .hero-desc { font-size:15px; color:var(--muted); line-height:1.7; max-width:360px; }
+
+    .features { margin-top:48px; display:flex; flex-direction:column; gap:16px; }
+    .feature { display:flex; align-items:center; gap:14px; }
+    .feature-icon { width:36px; height:36px; border-radius:8px; background:var(--surface2); border:1px solid var(--border); display:grid; place-items:center; color:var(--accent); }
+    .feature-text { font-size:14px; color:var(--muted); }
+
+    .right {
+      width:480px; display:flex; flex-direction:column; justify-content:center;
+      padding:60px 48px;
+    }
+    .form-title { font-family:'Space Mono',monospace; font-size:26px; font-weight:700; margin-bottom:6px; }
+    .form-sub   { font-size:14px; color:var(--muted); margin-bottom:36px; }
+
+    .flash { padding:12px 16px; border-radius:8px; margin-bottom:20px; font-size:13px; display:flex; align-items:center; gap:8px; }
+    .flash-danger  { background:#ef444415; border:1px solid #ef444440; color:var(--danger); }
+    .flash-success { background:#10b98115; border:1px solid #10b98140; color:var(--success); }
+
+    .form-group { margin-bottom:18px; }
+    .form-label { display:block; font-size:12px; font-weight:600; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:6px; }
+    .form-control {
+      width:100%; padding:11px 14px; background:var(--surface2); border:1px solid var(--border);
+      border-radius:8px; color:var(--text); font-size:14px; font-family:inherit;
+      transition:.2s; outline:none;
+    }
+    .form-control:focus { border-color:var(--accent); box-shadow:0 0 0 3px #3b82f615; }
+    .input-wrap { position:relative; }
+    .input-wrap .form-control { padding-right:40px; }
+    .input-wrap i { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--muted); cursor:pointer; }
+
+    .btn-submit {
+      width:100%; padding:13px; border-radius:8px; border:none;
+      background:linear-gradient(135deg,var(--accent),var(--accent2));
+      color:#fff; font-size:15px; font-weight:700; cursor:pointer;
+      font-family:'DM Sans',sans-serif; transition:.2s; margin-top:8px;
+    }
+    .btn-submit:hover { opacity:.9; transform:translateY(-1px); box-shadow:0 8px 24px #3b82f640; }
+
+    .divider { display:flex; align-items:center; gap:12px; margin:24px 0; }
+    .divider::before, .divider::after { content:''; flex:1; height:1px; background:var(--border); }
+    .divider span { font-size:12px; color:var(--muted); }
+
+    .signup-link { text-align:center; font-size:14px; color:var(--muted); }
+    .signup-link a { color:var(--accent); text-decoration:none; font-weight:600; }
+
+    .demo-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px; }
+    .demo-card {
+      padding:10px; border-radius:8px; border:1px solid var(--border);
+      background:var(--surface2); cursor:pointer; text-align:center; transition:.2s;
+    }
+    .demo-card:hover { border-color:var(--accent); }
+    .demo-card .role { font-size:11px; font-weight:700; text-transform:uppercase; color:var(--muted); }
+    .demo-card .cred { font-size:11px; color:var(--text); margin-top:2px; }
+
+    @media(max-width:900px) { .left { display:none; } .right { width:100%; padding:40px 24px; } }
+  </style>
+</head>
+<body>
+<div class="left">
+  <div class="brand">
+    <div class="brand-icon"><i class="fas fa-graduation-cap"></i></div>
+    <div>
+      <div class="brand-name">UniAttend</div>
+      <div class="brand-tag">University Attendance System</div>
+    </div>
+  </div>
+  <div class="hero-title">Track attendance<br>the <span>smart</span> way</div>
+  <div class="hero-desc">A complete attendance management platform for students, teachers, and administrators — built for modern universities.</div>
+  <div class="features">
+    <div class="feature"><div class="feature-icon"><i class="fas fa-chart-pie"></i></div><div class="feature-text">Real-time attendance analytics & reports</div></div>
+    <div class="feature"><div class="feature-icon"><i class="fas fa-bell"></i></div><div class="feature-text">Automatic low-attendance notifications</div></div>
+    <div class="feature"><div class="feature-icon"><i class="fas fa-file-alt"></i></div><div class="feature-text">Digital leave request management</div></div>
+    <div class="feature"><div class="feature-icon"><i class="fas fa-users"></i></div><div class="feature-text">Multi-role: Students, Teachers, Admins</div></div>
+  </div>
+</div>
+
+<div class="right">
+  <div class="form-title">Welcome back</div>
+  <div class="form-sub">Sign in to access your attendance portal</div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% for cat, msg in messages %}
+      <div class="flash flash-{{ cat }}"><i class="fas fa-exclamation-circle"></i> {{ msg }}</div>
+    {% endfor %}
+  {% endwith %}
+
+  <div class="form-sub" style="font-size:12px;margin-bottom:10px;">Quick demo login:</div>
+  <div class="demo-grid">
+    <div class="demo-card" onclick="fillDemo('admin@university.edu','Admin@123')">
+      <div class="role">Admin</div>
+      <div class="cred">admin@university.edu</div>
+    </div>
+    <div class="demo-card" onclick="fillDemo('rajesh.kumar@university.edu','Teacher@123')">
+      <div class="role">Teacher</div>
+      <div class="cred">rajesh.kumar@…</div>
+    </div>
+    <div class="demo-card" onclick="fillDemo('aarav.verma@student.edu','Student@123')">
+      <div class="role">Student</div>
+      <div class="cred">aarav.verma@…</div>
+    </div>
+  </div>
+
+  <form method="POST" action="/login">
+    <div class="form-group">
+      <label class="form-label">Email Address</label>
+      <input type="email" name="email" id="email" class="form-control" placeholder="you@university.edu" required/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <div class="input-wrap">
+        <input type="password" name="password" id="password" class="form-control" placeholder="••••••••" required/>
+        <i class="fas fa-eye" id="togglePwd"></i>
+      </div>
+    </div>
+    <button type="submit" class="btn-submit"><i class="fas fa-sign-in-alt"></i> Sign In</button>
+  </form>
+
+  <div class="divider"><span>or</span></div>
+  <div class="signup-link">Don't have an account? <a href="/signup">Create one</a></div>
+</div>
+
+<script>
+  document.getElementById('togglePwd').addEventListener('click',function(){
+    const p = document.getElementById('password');
+    p.type = p.type==='password'?'text':'password';
+    this.className = p.type==='password'?'fas fa-eye':'fas fa-eye-slash';
+  });
+  function fillDemo(e,p){
+    document.getElementById('email').value=e;
+    document.getElementById('password').value=p;
+  }
+</script>
+</body>
+</html>

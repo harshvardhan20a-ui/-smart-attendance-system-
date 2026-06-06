@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}Users{% endblock %}
+{% block page_title %}User Management{% endblock %}
+
+{% block content %}
+<div style="display:flex;gap:12px;margin-bottom:20px;flex-wrap:wrap;align-items:center;">
+  <input type="text" id="search" class="form-control"
+    placeholder="Search by name, email or ID…"
+    style="max-width:300px;"
+    oninput="filterTable(this.value)"/>
+  <select id="roleFilter" class="form-control" style="max-width:160px;"
+    onchange="filterTable(document.getElementById('search').value)">
+    <option value="">All Roles</option>
+    <option value="student">Students</option>
+    <option value="teacher">Teachers</option>
+    <option value="admin">Admins</option>
+  </select>
+  <div style="margin-left:auto;font-size:14px;color:var(--text-muted);">
+    {{ users | length }} users total
+  </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <div class="table-wrap">
+    <table id="userTable">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Role</th>
+          <th>Department</th>
+          <th>ID / Roll</th>
+          <th>Phone</th>
+          <th>Joined</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for u in users %}
+        <tr
+          data-name="{{ u.full_name | lower }}"
+          data-email="{{ u.email | lower }}"
+          data-role="{{ u.role }}"
+          data-id="{{ (u.roll_number or u.employee_id or '') | lower }}">
+          <td>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <div style="width:36px;height:36px;border-radius:50%;flex-shrink:0;
+                background:linear-gradient(135deg,
+                  {% if u.role == 'admin' %}#f59e0b,#d97706
+                  {% elif u.role == 'teacher' %}#8b5cf6,#6d28d9
+                  {% else %}#3b82f6,#06b6d4{% endif %});
+                display:grid;place-items:center;font-weight:700;font-size:13px;color:#fff;">
+                {{ u.full_name[0].upper() }}
+              </div>
+              <div>
+                <div style="font-weight:600;">{{ u.full_name }}</div>
+                <div style="font-size:11px;color:var(--text-muted)">{{ u.email }}</div>
+              </div>
+            </div>
+          </td>
+          <td><span class="badge badge-{{ u.role }}">{{ u.role }}</span></td>
+          <td>{{ u.department or '—' }}</td>
+          <td style="font-family:'Space Mono',monospace;font-size:12px;">
+            {{ u.roll_number or u.employee_id or '—' }}
+          </td>
+          <td style="font-size:13px;">{{ u.phone or '—' }}</td>
+          <td style="font-size:12px;color:var(--text-muted)">
+            {{ u.created_at.strftime('%d %b %Y') if u.created_at else '—' }}
+          </td>
+          <td>
+            <span style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;
+              color:{% if u.is_active %}var(--success){% else %}var(--danger){% endif %}">
+              <span style="width:7px;height:7px;border-radius:50%;display:inline-block;
+                background:{% if u.is_active %}var(--success){% else %}var(--danger){% endif %};"></span>
+              {% if u.is_active %}Active{% else %}Inactive{% endif %}
+            </span>
+          </td>
+          <td>
+            {% if u.id != session.get('user_id') %}
+            <button class="btn btn-outline btn-sm" onclick="toggleUser({{ u.id }})">
+              {% if u.is_active %}
+                <i class="fas fa-ban"></i> Disable
+              {% else %}
+                <i class="fas fa-check"></i> Enable
+              {% endif %}
+            </button>
+            {% else %}
+            <span style="font-size:11px;color:var(--text-muted)">(You)</span>
+            {% endif %}
+          </td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="8" style="text-align:center;padding:48px;color:var(--text-muted);">
+            No users found.
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function filterTable(q) {
+    q = q.toLowerCase();
+    const role = document.getElementById('roleFilter').value;
+    document.querySelectorAll('#userTable tbody tr').forEach(tr => {
+      const matchQ = !q ||
+        (tr.dataset.name  || '').includes(q) ||
+        (tr.dataset.email || '').includes(q) ||
+        (tr.dataset.id    || '').includes(q);
+      const matchR = !role || tr.dataset.role === role;
+      tr.style.display = (matchQ && matchR) ? '' : 'none';
+    });
+  }
+
+  function toggleUser(userId) {
+    fetch(`/users/toggle/${userId}`, { method: 'POST' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) location.reload();
+        else alert('Error toggling user.');
+      })
+      .catch(err => alert('Network error: ' + err));
+  }
+</script>
+{% endblock %}
